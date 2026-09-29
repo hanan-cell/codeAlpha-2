@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator — CodeAlpha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --body-bg: #17161a;
+    --case: #232320;
+    --case-edge: #2d2b27;
+    --panel: #161a13;
+    --digit: #9fd88c;
+    --digit-dim: #4c6b45;
+    --key-num: #3a3835;
+    --key-num-text: #ede9e3;
+    --key-op: #bd5b38;
+    --key-op-text: #fbeee5;
+    --key-eq: #3f6e5d;
+    --key-eq-text: #eaf5ef;
+    --key-clear: #7a6a5d;
+    --key-clear-text: #f2ece5;
+    --shadow-deep: rgba(0,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--body-bg);
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(159,216,140,0.05), transparent 40%),
+      radial-gradient(circle at 80% 85%, rgba(189,91,56,0.05), transparent 40%);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 32px 16px;
+  }
+
+  .calculator {
+    width: 320px;
+    background: var(--case);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow:
+      0 30px 60px -20px var(--shadow-deep),
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      inset 0 -2px 0 rgba(0,0,0,0.4);
+    border: 1px solid var(--case-edge);
+  }
+
+  .brand {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 2px 6px 14px;
+    color: #6b675f;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+  }
+  .brand span:last-child { color: #524e47; font-family: 'IBM Plex Mono', monospace; }
+
+  .display {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 22px 18px 16px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  .display::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.12) 0px,
+      rgba(0,0,0,0.12) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+  }
+
+  .expression {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--digit-dim);
+    min-height: 18px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+  }
+
+  .result {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 40px;
+    font-weight: 500;
+    color: var(--digit);
+    text-align: right;
+    text-shadow: 0 0 12px rgba(159,216,140,0.45);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 4px;
+    transition: text-shadow 0.15s ease;
+  }
+  .result.error { color: #d97757; text-shadow: 0 0 12px rgba(217,119,87,0.45); }
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  button {
+    border: none;
+    border-radius: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    padding: 16px 0;
+    cursor: pointer;
+    background: var(--key-num);
+    color: var(--key-num-text);
+    box-shadow: 0 3px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active,
+  button.pressed {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--digit);
+    outline-offset: 2px;
+  }
+
+  .op { background: var(--key-op); color: var(--key-op-text); }
+  .eq { background: var(--key-eq); color: var(--key-eq-text); grid-row: span 2; height: 100%; }
+  .clear { background: var(--key-clear); color: var(--key-clear-text); }
+  .zero { grid-column: span 2; }
+
+  .hint {
+    text-align: center;
+    color: #4c483f;
+    font-size: 11px;
+    margin-top: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button { transition: none; }
+  }
+
+  @media (max-width: 360px) {
+    .calculator { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="calculator">
+  <div class="brand"><span>DESK · 12</span><span>MODEL A-1</span></div>
+
+  <div class="display">
+    <div class="expression" id="expression">&nbsp;</div>
+    <div class="result" id="result">0</div>
+  </div>
+
+  <div class="keys">
+    <button class="clear" data-action="clear">AC</button>
+    <button class="clear" data-action="backspace">⌫</button>
+    <button class="clear" data-action="percent">%</button>
+    <button class="op" data-op="÷">÷</button>
+
+    <button data-num="7">7</button>
+    <button data-num="8">8</button>
+    <button data-num="9">9</button>
+    <button class="op" data-op="×">×</button>
+
+    <button data-num="4">4</button>
+    <button data-num="5">5</button>
+    <button data-num="6">6</button>
+    <button class="op" data-op="−">−</button>
+
+    <button data-num="1">1</button>
+    <button data-num="2">2</button>
+    <button data-num="3">3</button>
+    <button class="op" data-op="+">+</button>
+
+    <button class="zero" data-num="0">0</button>
+    <button data-num=".">.</button>
+    <button class="eq" data-action="equals">=</button>
+  </div>
+
+  <div class="hint">keyboard enabled — numbers, + − * / % . enter esc</div>
+</div>
+
+<script>
+(function () {
+  const expressionEl = document.getElementById('expression');
+  const resultEl = document.getElementById('result');
+
+  let current = '0';
+  let previous = null;
+  let operator = null;
+  let justEvaluated = false;
+
+  const OP_MAP = { '+': '+', '−': '−', '×': '×', '÷': '÷' };
+  const CALC_OP = { '+': (a, b) => a + b, '−': (a, b) => a - b, '×': (a, b) => a * b, '÷': (a, b) => a / b };
+
+  function formatNumber(n) {
+    if (!isFinite(n)) return 'Error';
+    if (Math.abs(n) > 1e12 || (Math.abs(n) < 1e-9 && n !== 0)) {
+      return n.toExponential(4);
+    }
+    const rounded = Math.round((n + Number.EPSILON) * 1e10) / 1e10;
+    return rounded.toString();
+  }
+
+  function updateDisplay() {
+    resultEl.classList.remove('error');
+    resultEl.textContent = current;
+
+    if (previous !== null && operator) {
+      expressionEl.textContent = `${formatNumber(previous)} ${operator}`;
+    } else {
+      expressionEl.textContent = '\u00A0';
+    }
+  }
+
+  function inputDigit(d) {
+    if (justEvaluated) {
+      current = d === '.' ? '0.' : d;
+      justEvaluated = false;
+      updateDisplay();
+      return;
+    }
+    if (d === '.') {
+      if (current.includes('.')) return;
+      current = current + '.';
+    } else {
+      current = current === '0' ? d : current + d;
+    }
+    updateDisplay();
+  }
+
+  function chooseOperator(op) {
+    if (operator && previous !== null && !justEvaluated) {
+      evaluate();
+    }
+    previous = parseFloat(current);
+    operator = op;
+    justEvaluated = false;
+    current = '0';
+    updateDisplay();
+  }
+
+  function evaluate() {
+    if (operator === null || previous === null) return;
+    const a = previous;
+    const b = parseFloat(current);
+    const result = CALC_OP[operator](a, b);
+
+    if (!isFinite(result)) {
+      resultEl.textContent = 'Error';
+      resultEl.classList.add('error');
+      expressionEl.textContent = '\u00A0';
+      current = '0';
+      previous = null;
+      operator = null;
+      justEvaluated = true;
+      return;
+    }
+
+    current = formatNumber(result);
+    previous = null;
+    operator = null;
+    justEvaluated = true;
+    updateDisplay();
+  }
+
+  function percent() {
+    current = formatNumber(parseFloat(current) / 100);
+    updateDisplay();
+  }
+
+  function backspace() {
+    if (justEvaluated) return;
+    current = current.length > 1 ? current.slice(0, -1) : '0';
+    updateDisplay();
+  }
+
+  function clearAll() {
+    current = '0';
+    previous = null;
+    operator = null;
+    justEvaluated = false;
+    updateDisplay();
+  }
+
+  function flashKey(btn) {
+    if (!btn) return;
+    btn.classList.add('pressed');
+    setTimeout(() => btn.classList.remove('pressed'), 90);
+  }
+
+  document.querySelectorAll('[data-num]').forEach(btn => {
+    btn.addEventListener('click', () => { inputDigit(btn.dataset.num); flashKey(btn); });
+  });
+  document.querySelectorAll('[data-op]').forEach(btn => {
+    btn.addEventListener('click', () => { chooseOperator(btn.dataset.op); flashKey(btn); });
+  });
+  document.querySelector('[data-action="equals"]').addEventListener('click', function () { evaluate(); flashKey(this); });
+  document.querySelector('[data-action="clear"]').addEventListener('click', function () { clearAll(); flashKey(this); });
+  document.querySelector('[data-action="backspace"]').addEventListener('click', function () { backspace(); flashKey(this); });
+  document.querySelector('[data-action="percent"]').addEventListener('click', function () { percent(); flashKey(this); });
+
+  const KEY_TO_OP = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') {
+      inputDigit(e.key);
+      flashKey(document.querySelector(`[data-num="${e.key}"]`));
+    } else if (e.key === '.') {
+      inputDigit('.');
+      flashKey(document.querySelector('[data-num="."]'));
+    } else if (KEY_TO_OP[e.key]) {
+      chooseOperator(KEY_TO_OP[e.key]);
+      flashKey(document.querySelector(`[data-op="${KEY_TO_OP[e.key]}"]`));
+    } else if (e.key === 'Enter' || e.key === '=') {
+      e.preventDefault();
+      evaluate();
+      flashKey(document.querySelector('[data-action="equals"]'));
+    } else if (e.key === 'Escape') {
+      clearAll();
+      flashKey(document.querySelector('[data-action="clear"]'));
+    } else if (e.key === 'Backspace') {
+      backspace();
+      flashKey(document.querySelector('[data-action="backspace"]'));
+    } else if (e.key === '%') {
+      percent();
+      flashKey(document.querySelector('[data-action="percent"]'));
+    }
+  });
+
+  updateDisplay();
+})();
+</script>
+
+</body>
+</html>
